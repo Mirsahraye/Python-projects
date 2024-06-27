@@ -1,0 +1,75 @@
+#!/usr/bin/python
+import readline
+#allow backwards support for python2 command
+try:
+    input = raw_input
+except NameError:
+    pass
+switch=str(input("Enter 'c' for cisco, 'b' for brocade: "))
+if switch == 'c':
+    ## CISCO ###
+    # Create a zone
+    zoneset_in=str(input("What's the zoneset name (ex. Zoneset1): "))
+    zoneset=str('zoneset name %s' %zoneset_in)
+    vsan_in=str(input("What's the vsan# (ex. 100): "))
+    vsan=str('vsan %s' %vsan_in)
+    print("\nClient Questions")
+    client_n=str(input("What's the client name (ex. hitdev1): "))
+    client_n_p1= str(client_n + "_p1")
+    client_n_p2= str(client_n + "_p2")
+    client_wwpn_p1= str(input("What's the pwwn for %s (ex. 10000090fa539ef8): " % client_n_p1))
+    client_wwpn_p2= str(input("What's the pwwn for %s (ex. 10000090fa539ef9): " % client_n_p2))
+    arrayname_n=str(input("What's the array name (ex. for sjc-array525 please enter sjc_array525): "))
+    print("\nArray Questions")
+    fc_ports=int(input("How many total fc ports are there: "))
+    # Zone creation
+    zone1= str('zone name %s_%s %s' %(client_n_p1, arrayname_n, vsan))
+    zone1_1=str('%s_%s' %(client_n_p1, arrayname_n))
+    zone2= str('zone name %s_%s %s' %(client_n_p2, arrayname_n, vsan))
+    zone2_1=str('%s_%s' %(client_n_p2, arrayname_n))
+    print("\nConfiguration:")
+    print("conf t")
+    print("device-alias database")
+    print("device-alias name %s pwwn %s" % (client_n_p1, client_wwpn_p1))
+    print("device-alias name %s pwwn %s" % (client_n_p2, client_wwpn_p2))
+    print("exit")
+    print(zone1)
+    print("member interface fc%s , fc%s" % tuple(input("Enter slotport %d (ex. 115 116): " % (i+1) for i in range(fc_ports))))
+    print("member pwwn %s" % client_wwpn_p1)
+    print("exit")
+    print(zone2)
+    print("member interface fc%s , fc%s" % tuple(input("Enter slotport %d (ex. 115 116): " % (i+1) for i in range(fc_ports))))
+    print("member pwwn %s" % client_wwpn_p2)
+    print("exit")
+    print("%s %s" % (zoneset, vsan))
+    print("member %s %s" % (zone1_1, zone2_1))
+    print("exit")
+    print("zoneset activate name %s %s" % (zoneset_in, vsan))
+    print("device-alias commit")
+    print("do copy running-config startup-config")
+elif switch == 'b':
+    # Brocade Zoning
+    cfg_n=str(input("What's the Effective configuration's name: "))
+    client_n=str(input("What's the client name (ex. hitdev1): "))
+    client_n_p1= str(client_n + "_p1")
+    client_n_p2= str(client_n + "_p2")
+    client_wwpn_p1= str(input("What's the wwpn for %s (ex. 10000090fa539ef8): " % client_n_p1))
+    client_wwpn_p2= str(input("What's the wwpn for %s (ex. 10000090fa539ef9): " % client_n_p2))
+    arrayname_n=str(input("What's the array name (ex. for sjc-array525 please enter sjc_array525): "))
+    switchDomain=int(input("What's the switchDomain (ex. 1): "))
+    fc_ports=int(input("How many total fc ports are there: "))
+    print("\nConfiguration:")
+    for i in range(1, fc_ports+1):
+        port=int(input("Enter port %d (ex. 15): " % i))
+        print("alicreate %s, %s, %d;%d" % (arrayname_n, switchDomain, port, port))
+    print("\nClient:")
+    print("alicreate %s, %s" % (client_n_p1 , client_wwpn_p1))
+    print("alicreate %s, %s" % (client_n_p2 , client_wwpn_p2))
+    print("\nZone Creation:")
+    zone1= str('zonecreate %s_%s, %s;%s' %(client_n_p1, arrayname_n, client_n_p1, arrayname_n))
+    zone2= str('zonecreate %s_%s, %s;%s' %(client_n_p2, arrayname_n, client_n_p2, arrayname_n))
+    print(zone1)
+    print(zone2)
+    print("\nAdding Zones to CFG:")
+    print('cfgadd %s, %s_%s;%s_%s' % (cfg_n , client_n_p1, arrayname_n, client_n_p2, arrayname_n))
+    print('cfgenable %s' % cfg_n)
